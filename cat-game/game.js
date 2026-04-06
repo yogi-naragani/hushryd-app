@@ -9,6 +9,10 @@ let gameRunning = false;
 const gameArea = document.getElementById('game-area');
 const scoreEl = document.getElementById('score');
 
+// Track all active cats for proximity detection
+const activeCats = new Set();
+const HISS_PROXIMITY = 150; // px distance to trigger hissing
+
 // ---- Clouds ----
 function spawnCloud() {
   const cloud = document.createElement('div');
@@ -24,6 +28,80 @@ function spawnCloud() {
   setTimeout(() => cloud.remove(), dur * 1000);
 }
 
+// ---- Get cat center position ----
+function getCatPos(container) {
+  const rect = container.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+// ---- Check proximity between cats ----
+function checkCatProximity() {
+  if (!gameRunning) return;
+
+  const catArray = Array.from(activeCats).filter(c => c.parentNode && !c.dataset.clicked);
+
+  for (let i = 0; i < catArray.length; i++) {
+    for (let j = i + 1; j < catArray.length; j++) {
+      const a = catArray[i];
+      const b = catArray[j];
+      const posA = getCatPos(a);
+      const posB = getCatPos(b);
+      const dist = Math.hypot(posA.x - posB.x, posA.y - posB.y);
+
+      if (dist < HISS_PROXIMITY) {
+        // Both cats react! Hiss at each other
+        const now = Date.now();
+        if (!a.dataset.lastHiss || now - parseInt(a.dataset.lastHiss) > 2000) {
+          a.dataset.lastHiss = now;
+          b.dataset.lastHiss = now;
+
+          // Visual: both arch their backs momentarily
+          a.classList.add('hissing');
+          b.classList.add('hissing');
+          setTimeout(() => {
+            a.classList.remove('hissing');
+            b.classList.remove('hissing');
+          }, 800);
+
+          // Sound: hiss!
+          playHiss();
+          setTimeout(() => playHiss(), 200);
+
+          // Swap to hissing SVG briefly
+          if (!a.dataset.hissSwapped) {
+            a.dataset.hissSwapped = 'true';
+            const colorsA = JSON.parse(a.dataset.colors);
+            const sizeA = parseFloat(a.dataset.catSize);
+            const origA = a.innerHTML;
+            a.innerHTML = createHissingCatSVG(colorsA, sizeA);
+            setTimeout(() => {
+              if (a.parentNode && !a.dataset.clicked) {
+                a.innerHTML = origA;
+                a.dataset.hissSwapped = '';
+              }
+            }, 800);
+          }
+          if (!b.dataset.hissSwapped) {
+            b.dataset.hissSwapped = 'true';
+            const colorsB = JSON.parse(b.dataset.colors);
+            const sizeB = parseFloat(b.dataset.catSize);
+            const origB = b.innerHTML;
+            b.innerHTML = createHissingCatSVG(colorsB, sizeB);
+            setTimeout(() => {
+              if (b.parentNode && !b.dataset.clicked) {
+                b.innerHTML = origB;
+                b.dataset.hissSwapped = '';
+              }
+            }, 800);
+          }
+        }
+      }
+    }
+  }
+
+  requestAnimationFrame(checkCatProximity);
+}
+
 // ---- Spawn Cat ----
 function spawnCat() {
   if (!gameRunning) return;
@@ -34,13 +112,7 @@ function spawnCat() {
   const container = document.createElement('div');
   container.className = 'cat-container idle';
   container.innerHTML = createCatSVG(colorScheme, catSize);
-  container.dataset.colorBody = colorScheme.body;
-  container.dataset.colorDark = colorScheme.dark;
-  container.dataset.colorEye = colorScheme.eye;
-  container.dataset.colorStripe = colorScheme.stripe;
   container.dataset.catSize = catSize;
-
-  // Store color scheme as JSON for scared SVG swap
   container.dataset.colors = JSON.stringify(colorScheme);
 
   const groundHeight = 80;
@@ -59,13 +131,31 @@ function spawnCat() {
     container.dataset.facing = 'right';
   }
 
-  // Prowl movement - some cats slowly walk
-  if (Math.random() > 0.5) {
+  // Cat behaviors - weighted random
+  const behavior = Math.random();
+  let posX = x;
+
+  if (behavior < 0.3) {
+    // SITTING: cat just sits, breathes, occasionally licks/blinks
+    container.classList.remove('idle');
+    container.classList.add('sitting');
+    // Blink occasionally
+    const blinkInterval = setInterval(() => {
+      if (!container.parentNode || container.dataset.clicked) {
+        clearInterval(blinkInterval);
+        return;
+      }
+      container.classList.add('blinking');
+      setTimeout(() => container.classList.remove('blinking'), 300);
+    }, 2000 + Math.random() * 3000);
+    container.dataset.blinkInterval = blinkInterval;
+
+  } else if (behavior < 0.6) {
+    // PROWLING: cat slowly walks
     container.classList.remove('idle');
     container.classList.add('prowl');
     const speed = 0.3 + Math.random() * 0.5;
     const dir = facingLeft ? -1 : 1;
-    let posX = x;
     const walkInterval = setInterval(() => {
       if (container.dataset.clicked || !container.parentNode) {
         clearInterval(walkInterval);
@@ -75,43 +165,64 @@ function spawnCat() {
       container.style.left = posX + 'px';
       if (posX < -100 || posX > window.innerWidth + 100) {
         clearInterval(walkInterval);
+        activeCats.delete(container);
         container.remove();
       }
     }, 16);
     container.dataset.walkInterval = walkInterval;
+
+  } else if (behavior < 0.8) {
+    // GROOMING: cat licks itself
+    container.classList.remove('idle');
+    container.classList.add('grooming');
+
+  } else {
+    // IDLE: gentle breathing + tail sway (default)
   }
 
-  // Occasional purr sound
-  if (Math.random() > 0.7) {
-    setTimeout(() => {
-      if (container.parentNode && !container.dataset.clicked) {
-        playPurr();
-      }
-    }, 1000 + Math.random() * 2000);
+  // --- Sound behaviors ---
+
+  // Purring when sitting still (30% chance, repeats)
+  if (behavior < 0.3 || behavior >= 0.8) {
+    const purrLoop = () => {
+      if (!container.parentNode || container.dataset.clicked) return;
+      playPurr();
+      setTimeout(purrLoop, 3000 + Math.random() * 4000);
+    };
+    setTimeout(purrLoop, 1500 + Math.random() * 2000);
   }
 
-  // Occasional idle meow
-  if (Math.random() > 0.6) {
-    setTimeout(() => {
-      if (container.parentNode && !container.dataset.clicked) {
-        playMeow();
+  // Occasional idle meow (any cat)
+  if (Math.random() > 0.5) {
+    const meowLoop = () => {
+      if (!container.parentNode || container.dataset.clicked) return;
+      playMeow();
+      // Next meow after random delay
+      if (Math.random() > 0.4) {
+        setTimeout(meowLoop, 4000 + Math.random() * 6000);
       }
-    }, 500 + Math.random() * 3000);
+    };
+    setTimeout(meowLoop, 1000 + Math.random() * 3000);
   }
 
   container.addEventListener('click', (e) => onCatClick(e, container));
   gameArea.appendChild(container);
+  activeCats.add(container);
 
   // Auto-leave after timeout
-  const lifespan = 4000 + Math.random() * 5000;
+  const lifespan = 5000 + Math.random() * 6000;
   setTimeout(() => {
     if (container.parentNode && !container.dataset.clicked) {
-      // Cat walks away in the direction it's facing
-      container.classList.remove('idle', 'prowl');
+      // Quiet meow as cat wanders off
+      playMeow();
+      container.classList.remove('idle', 'prowl', 'sitting', 'grooming');
       const dir = container.dataset.facing === 'left' ? 'run-left' : 'run-right';
       container.classList.add(dir);
       combo = 0;
-      setTimeout(() => container.remove(), 1100);
+      setTimeout(() => {
+        activeCats.delete(container);
+        container.remove();
+      }, 1100);
     }
   }, lifespan);
 }
@@ -121,10 +232,9 @@ function onCatClick(e, container) {
   if (container.dataset.clicked) return;
   container.dataset.clicked = 'true';
 
-  // Clear any walk interval
-  if (container.dataset.walkInterval) {
-    clearInterval(parseInt(container.dataset.walkInterval));
-  }
+  // Clear any intervals
+  if (container.dataset.walkInterval) clearInterval(parseInt(container.dataset.walkInterval));
+  if (container.dataset.blinkInterval) clearInterval(parseInt(container.dataset.blinkInterval));
 
   // Score
   combo++;
@@ -153,14 +263,12 @@ function onCatClick(e, container) {
     setTimeout(() => comboEl.remove(), 1000);
   }
 
-  // --- PHASE 1: SCARED JUMP ---
-
-  // Swap to scared SVG (wide eyes, open mouth)
+  // --- PHASE 1: SCARED JUMP + YOWL ---
   const colors = JSON.parse(container.dataset.colors);
   const catSize = parseFloat(container.dataset.catSize);
   container.innerHTML = createScaredCatSVG(colors, catSize);
 
-  // Cat fight! Scared yowls, hisses, screams - all real cat sounds
+  // Scared yowl sound - matched to the jump motion
   playCatFight();
 
   // Exclamation effects
@@ -193,13 +301,27 @@ function onCatClick(e, container) {
   }
 
   // Apply scared animation
-  container.classList.remove('idle', 'prowl');
+  container.classList.remove('idle', 'prowl', 'sitting', 'grooming');
   container.classList.add('scared');
 
-  // --- PHASE 2: RUN AWAY (Tom & Jerry style) ---
+  // --- PHASE 2: PANICKED RUN ---
   setTimeout(() => {
-    // Panicked meow as cat runs away
+    // Panicked meow as cat sprints away
     playRunMeow();
+
+    // Nearby cats also get startled and hiss
+    const myPos = getCatPos(container);
+    activeCats.forEach(other => {
+      if (other === container || other.dataset.clicked) return;
+      const otherPos = getCatPos(other);
+      const dist = Math.hypot(myPos.x - otherPos.x, myPos.y - otherPos.y);
+      if (dist < 250) {
+        // Nearby cat gets startled - arches back briefly
+        other.classList.add('startled');
+        playHiss();
+        setTimeout(() => other.classList.remove('startled'), 600);
+      }
+    });
 
     // Dust clouds
     const catLeft = container.offsetLeft;
@@ -215,7 +337,7 @@ function onCatClick(e, container) {
       setTimeout(() => dust.remove(), 800);
     }
 
-    // Run in the direction the cat is facing
+    // Speed lines
     const runDir = container.dataset.facing === 'left' ? 'run-left' : 'run-right';
     const lineColors = ['rgba(0,0,0,0.4)', 'rgba(100,100,100,0.3)', 'rgba(50,50,50,0.35)'];
     for (let i = 0; i < 6; i++) {
@@ -236,7 +358,10 @@ function onCatClick(e, container) {
     container.classList.remove('scared');
     container.classList.add(runDir);
 
-    setTimeout(() => container.remove(), 1100);
+    setTimeout(() => {
+      activeCats.delete(container);
+      container.remove();
+    }, 1100);
   }, 500);
 }
 
@@ -254,6 +379,9 @@ async function startGame() {
   preloadMeows().then(() => {
     showLoadingStatus('');
   });
+
+  // Start proximity checker
+  requestAnimationFrame(checkCatProximity);
 
   // Spawn schedule
   function scheduleNext() {
@@ -281,6 +409,7 @@ async function startGame() {
 window.addEventListener('resize', () => {
   document.querySelectorAll('.cat-container').forEach(cat => {
     if (cat.offsetLeft > window.innerWidth + 100 || cat.offsetTop > window.innerHeight + 100) {
+      activeCats.delete(cat);
       cat.remove();
     }
   });

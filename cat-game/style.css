@@ -106,6 +106,85 @@ body {
   100% { transform: skewX(0deg); }
 }
 
+/* Sitting: gentle breathing, slow tail */
+.cat-container.sitting {
+  animation: catSit 3s ease-in-out infinite;
+}
+.cat-container.sitting .cat-tail {
+  animation: tailSlowSway 2.5s ease-in-out infinite alternate;
+  transform-origin: bottom left;
+}
+@keyframes catSit {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-2px) scaleY(1.02); }
+}
+@keyframes tailSlowSway {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(8deg); }
+}
+
+/* Grooming: head dips down rhythmically */
+.cat-container.grooming {
+  animation: groomBob 1.2s ease-in-out infinite;
+}
+.cat-container.grooming .cat-head {
+  animation: groomLick 1.2s ease-in-out infinite;
+}
+.cat-container.grooming .cat-tail {
+  animation: tailSlowSway 2s ease-in-out infinite alternate;
+  transform-origin: bottom left;
+}
+@keyframes groomBob {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(2px); }
+  60% { transform: translateY(2px); }
+}
+@keyframes groomLick {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  30% { transform: rotate(8deg) translateY(4px); }
+  70% { transform: rotate(8deg) translateY(4px); }
+}
+
+/* Blinking */
+.cat-container.blinking .cat-eyes {
+  animation: blink 0.3s ease-in-out;
+}
+@keyframes blink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.05); }
+}
+
+/* Hissing - arched back, body puffs up */
+.cat-container.hissing {
+  animation: hissArch 0.8s ease-out;
+}
+@keyframes hissArch {
+  0% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(-8px) scale(1.08, 1.15); }
+  50% { transform: translateY(-5px) scale(1.06, 1.12); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Startled by nearby cat getting clicked */
+.cat-container.startled {
+  animation: startleJolt 0.6s ease-out;
+}
+.cat-container.startled .cat-tail {
+  animation: tailPuff 0.6s ease-out;
+  transform-origin: bottom left;
+}
+@keyframes startleJolt {
+  0% { transform: translateY(0) scale(1); }
+  15% { transform: translateY(-15px) scale(1.1); }
+  40% { transform: translateY(-10px) scale(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes tailPuff {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(-40deg); }
+  100% { transform: rotate(0deg); }
+}
+
 /* Scared Jump - classic Tom & Jerry startle */
 .cat-container.scared {
   animation: tomScaredJump 0.5s cubic-bezier(0.2, 0, 0.2, 1) forwards;

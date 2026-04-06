@@ -206,6 +206,107 @@ function createScaredCatSVG(colorScheme, size) {
   return svg;
 }
 
+// Create a HISSING version - arched back, ears flat, mouth open showing teeth
+function createHissingCatSVG(colorScheme, size) {
+  const s = size || 90;
+  const c = colorScheme;
+
+  const svg = `
+  <svg viewBox="0 0 140 130" width="${s * 1.4}" height="${s * 1.3}" class="cat-svg">
+    <!-- Tail - puffed and curved up angrily -->
+    <g class="cat-tail">
+      <path d="M18,78 Q2,50 10,25 Q15,15 25,20"
+            stroke="${c.dark}" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="M18,78 Q2,50 10,25 Q15,15 25,20"
+            stroke="${c.body}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- Back legs - crouched -->
+    <g class="cat-legs">
+      <rect x="32" y="100" width="13" height="22" rx="5" fill="${c.dark}" />
+      <rect x="33" y="101" width="11" height="20" rx="4" fill="${c.body}" />
+      <ellipse cx="38" cy="122" rx="8" ry="4" fill="${c.dark}" />
+
+      <rect x="52" y="100" width="13" height="22" rx="5" fill="${c.dark}" />
+      <rect x="53" y="101" width="11" height="20" rx="4" fill="${c.body}" />
+      <ellipse cx="58" cy="122" rx="8" ry="4" fill="${c.dark}" />
+    </g>
+
+    <!-- Body - arched back (hissing posture) -->
+    <g class="cat-body">
+      <ellipse cx="68" cy="84" rx="38" ry="26" fill="${c.dark}" />
+      <ellipse cx="68" cy="83" rx="36" ry="24" fill="${c.body}" />
+      <!-- Fur bristling along spine -->
+      <path d="M40,62 L37,53 L44,60" fill="${c.body}" stroke="${c.dark}" stroke-width="0.8"/>
+      <path d="M50,58 L48,48 L54,56" fill="${c.body}" stroke="${c.dark}" stroke-width="0.8"/>
+      <path d="M60,56 L59,46 L64,54" fill="${c.body}" stroke="${c.dark}" stroke-width="0.8"/>
+      <path d="M70,56 L69,46 L74,54" fill="${c.body}" stroke="${c.dark}" stroke-width="0.8"/>
+      <path d="M80,58 L79,48 L84,56" fill="${c.body}" stroke="${c.dark}" stroke-width="0.8"/>
+      <path d="M90,62 L89,53 L94,60" fill="${c.body}" stroke="${c.dark}" stroke-width="0.8"/>
+    </g>
+
+    <!-- Front legs - braced -->
+    <g class="cat-legs">
+      <rect x="84" y="96" width="13" height="27" rx="5" fill="${c.dark}" />
+      <rect x="85" y="97" width="11" height="25" rx="4" fill="${c.body}" />
+      <ellipse cx="90" cy="123" rx="8" ry="4" fill="${c.dark}" />
+
+      <rect x="102" y="96" width="13" height="27" rx="5" fill="${c.dark}" />
+      <rect x="103" y="97" width="11" height="25" rx="4" fill="${c.body}" />
+      <ellipse cx="108" cy="123" rx="8" ry="4" fill="${c.dark}" />
+    </g>
+
+    <!-- Head - low and forward (aggressive) -->
+    <g class="cat-head">
+      <!-- Ears - FLAT back (angry) -->
+      <polygon points="82,45 70,30 90,38" fill="${c.dark}" />
+      <polygon points="83,44 73,32 89,39" fill="${c.body}" />
+      <polygon points="84,43 75,34 88,40" fill="#FFB6C1" opacity="0.5"/>
+
+      <polygon points="118,45 130,30 110,38" fill="${c.dark}" />
+      <polygon points="117,44 128,32 111,39" fill="${c.body}" />
+      <polygon points="116,43 126,34 112,40" fill="#FFB6C1" opacity="0.5"/>
+
+      <!-- Head shape - slightly lower -->
+      <ellipse cx="100" cy="52" rx="27" ry="22" fill="${c.dark}" />
+      <ellipse cx="100" cy="51" rx="25" ry="20" fill="${c.body}" />
+
+      <!-- Angry narrowed eyes -->
+      <g class="cat-eyes">
+        <ellipse cx="90" cy="48" rx="8" ry="6" fill="white" stroke="${c.dark}" stroke-width="1.5"/>
+        <ellipse cx="110" cy="48" rx="8" ry="6" fill="white" stroke="${c.dark}" stroke-width="1.5"/>
+        <!-- Angry slit pupils -->
+        <ellipse cx="91" cy="48" rx="2" ry="5" fill="#111"/>
+        <ellipse cx="111" cy="48" rx="2" ry="5" fill="#111"/>
+        <!-- Angry eyebrow lines -->
+        <line x1="82" y1="42" x2="94" y2="44" stroke="${c.dark}" stroke-width="2"/>
+        <line x1="118" y1="42" x2="106" y2="44" stroke="${c.dark}" stroke-width="2"/>
+      </g>
+
+      <!-- Open mouth HISSING - showing teeth -->
+      <ellipse cx="100" cy="60" rx="7" ry="8" fill="#CC3333" stroke="${c.dark}" stroke-width="1.5"/>
+      <!-- Teeth -->
+      <line x1="95" y1="56" x2="96" y2="59" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="104" y1="56" x2="103" y2="59" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- Tongue -->
+      <ellipse cx="100" cy="63" rx="3" ry="2.5" fill="#FF8888"/>
+
+      <!-- Whiskers - spread and forward (aggressive) -->
+      <line x1="55" y1="47" x2="83" y2="52" stroke="${c.dark}" stroke-width="1.5" opacity="0.7"/>
+      <line x1="53" y1="54" x2="83" y2="55" stroke="${c.dark}" stroke-width="1.5" opacity="0.7"/>
+      <line x1="55" y1="61" x2="83" y2="58" stroke="${c.dark}" stroke-width="1.5" opacity="0.7"/>
+      <line x1="117" y1="52" x2="145" y2="47" stroke="${c.dark}" stroke-width="1.5" opacity="0.7"/>
+      <line x1="117" y1="55" x2="147" y2="54" stroke="${c.dark}" stroke-width="1.5" opacity="0.7"/>
+      <line x1="117" y1="58" x2="145" y2="61" stroke="${c.dark}" stroke-width="1.5" opacity="0.7"/>
+
+      <!-- Wrinkled nose -->
+      <path d="M96,56 Q100,54 104,56" stroke="${c.dark}" stroke-width="1" fill="none"/>
+    </g>
+  </svg>`;
+
+  return svg;
+}
+
 // Get random cat color
 function getRandomCatColor() {
   return CAT_COLORS[Math.floor(Math.random() * CAT_COLORS.length)];
