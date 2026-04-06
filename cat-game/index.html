@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat Chase! - Tom & Jerry Style</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    overflow: hidden;
+    background: linear-gradient(180deg, #87CEEB 0%, #98FB98 70%, #228B22 100%);
+    height: 100vh;
+    width: 100vw;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text y="28" font-size="28">🖐️</text></svg>') 16 16, auto;
+    font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+    user-select: none;
+  }
+
+  #game-area {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Ground */
+  #ground {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 80px;
+    background: linear-gradient(0deg, #2d5a1b, #3a7a2a);
+    border-top: 4px solid #1a3d10;
+  }
+  #ground::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    width: 100%;
+    height: 20px;
+    background: repeating-linear-gradient(90deg, transparent, transparent 20px, #3a7a2a55 20px, #3a7a2a55 22px);
+  }
+
+  /* Clouds */
+  .cloud {
+    position: absolute;
+    background: white;
+    border-radius: 50px;
+    opacity: 0.8;
+    animation: drift linear infinite;
+  }
+  @keyframes drift {
+    from { transform: translateX(-200px); }
+    to { transform: translateX(calc(100vw + 200px)); }
+  }
+
+  /* Score */
+  #score-board {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: #FFD700;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-size: 24px;
+    font-weight: bold;
+    z-index: 100;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
+    letter-spacing: 1px;
+  }
+
+  /* Cat */
+  .cat {
+    position: absolute;
+    font-size: 60px;
+    cursor: pointer;
+    transition: none;
+    z-index: 10;
+    filter: drop-shadow(2px 4px 3px rgba(0,0,0,0.3));
+  }
+  .cat:hover {
+    filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)) brightness(1.1);
+  }
+
+  .cat.idle {
+    animation: catIdle 1.5s ease-in-out infinite;
+  }
+  @keyframes catIdle {
+    0%, 100% { transform: translateY(0) scaleX(1); }
+    50% { transform: translateY(-5px) scaleX(1); }
+  }
+
+  .cat.scared-jump {
+    animation: scaredJump 0.4s ease-out forwards;
+  }
+  @keyframes scaredJump {
+    0% { transform: translateY(0) scale(1) rotate(0deg); }
+    30% { transform: translateY(-120px) scale(1.3) rotate(-15deg); }
+    60% { transform: translateY(-100px) scale(1.2) rotate(10deg); }
+    100% { transform: translateY(-80px) scale(1.15) rotate(0deg); }
+  }
+
+  .cat.run-right {
+    animation: runRight 0.8s ease-in forwards;
+  }
+  @keyframes runRight {
+    0% { transform: translateX(0) scaleX(-1) rotate(0deg); opacity: 1; }
+    20% { transform: translateX(40px) scaleX(-1) rotate(-10deg); opacity: 1; }
+    40% { transform: translateX(120px) scaleX(-1) rotate(5deg); opacity: 1; }
+    60% { transform: translateX(280px) scaleX(-1) rotate(-8deg); opacity: 0.8; }
+    80% { transform: translateX(500px) scaleX(-1) rotate(3deg); opacity: 0.5; }
+    100% { transform: translateX(800px) scaleX(-1) rotate(0deg); opacity: 0; }
+  }
+
+  .cat.run-left {
+    animation: runLeft 0.8s ease-in forwards;
+  }
+  @keyframes runLeft {
+    0% { transform: translateX(0) scaleX(1) rotate(0deg); opacity: 1; }
+    20% { transform: translateX(-40px) scaleX(1) rotate(10deg); opacity: 1; }
+    40% { transform: translateX(-120px) scaleX(1) rotate(-5deg); opacity: 1; }
+    60% { transform: translateX(-280px) scaleX(1) rotate(8deg); opacity: 0.8; }
+    80% { transform: translateX(-500px) scaleX(1) rotate(-3deg); opacity: 0.5; }
+    100% { transform: translateX(-800px) scaleX(1) rotate(0deg); opacity: 0; }
+  }
+
+  /* Dust cloud effect */
+  .dust {
+    position: absolute;
+    pointer-events: none;
+    font-size: 30px;
+    opacity: 0;
+    z-index: 5;
+    animation: dustPoof 0.6s ease-out forwards;
+  }
+  @keyframes dustPoof {
+    0% { opacity: 1; transform: scale(0.5) translateY(0); }
+    50% { opacity: 0.7; transform: scale(1.5) translateY(-20px); }
+    100% { opacity: 0; transform: scale(2) translateY(-40px); }
+  }
+
+  /* Exclamation marks on scare */
+  .exclaim {
+    position: absolute;
+    pointer-events: none;
+    font-size: 28px;
+    font-weight: bold;
+    color: #FF0000;
+    z-index: 15;
+    animation: exclaimPop 0.5s ease-out forwards;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+  @keyframes exclaimPop {
+    0% { opacity: 1; transform: scale(0.3) translateY(0); }
+    40% { opacity: 1; transform: scale(1.4) translateY(-40px); }
+    100% { opacity: 0; transform: scale(1) translateY(-70px); }
+  }
+
+  /* Speed lines */
+  .speed-line {
+    position: absolute;
+    pointer-events: none;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.4), transparent);
+    z-index: 4;
+    animation: speedFade 0.4s ease-out forwards;
+    border-radius: 2px;
+  }
+  @keyframes speedFade {
+    0% { opacity: 1; width: 60px; }
+    100% { opacity: 0; width: 120px; }
+  }
+
+  /* Intro overlay */
+  #intro {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+  }
+  #intro h1 {
+    font-size: 52px;
+    color: #FFD700;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+    margin-bottom: 10px;
+  }
+  #intro p {
+    font-size: 22px;
+    color: #fff;
+    margin-bottom: 30px;
+  }
+  #intro button {
+    font-family: inherit;
+    font-size: 28px;
+    padding: 15px 50px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #FF6B35, #FF2E63);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255,46,99,0.5);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #intro button:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 25px rgba(255,46,99,0.7);
+  }
+  #intro .cats-preview {
+    font-size: 70px;
+    margin-bottom: 15px;
+    animation: bounce 1s ease-in-out infinite alternate;
+  }
+  @keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-15px); }
+  }
+
+  /* Combo text */
+  .combo-text {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: #FF2E63;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+    z-index: 50;
+    pointer-events: none;
+    animation: comboAnim 0.8s ease-out forwards;
+  }
+  @keyframes comboAnim {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+    40% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+    100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <div class="cats-preview">🐱 🐈 🐈‍⬛</div>
+  <h1>Cat Chase!</h1>
+  <p>Click the cats before they get away!</p>
+  <button onclick="startGame()">Play!</button>
+</div>
+
+<div id="game-area">
+  <div id="score-board">Score: <span id="score">0</span></div>
+  <div id="ground"></div>
+</div>
+
+<script>
+// ---- Audio (Web Audio API - no external files needed) ----
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playMeow() {
+  ensureAudio();
+  const ctx = audioCtx;
+  const duration = 0.25;
+
+  // Main meow oscillator
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(900 + Math.random() * 400, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(500 + Math.random() * 200, ctx.currentTime + duration);
+  gain.gain.setValueAtTime(0.35, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration);
+
+  // Harmonic for realism
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'triangle';
+  osc2.frequency.setValueAtTime(1300 + Math.random() * 300, ctx.currentTime);
+  osc2.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + duration * 0.8);
+  gain2.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration * 0.8);
+  osc2.connect(gain2).connect(ctx.destination);
+  osc2.start(ctx.currentTime);
+  osc2.stop(ctx.currentTime + duration);
+}
+
+function playScaredMeow() {
+  ensureAudio();
+  const ctx = audioCtx;
+  const duration = 0.4;
+
+  // High-pitched scared yelp
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(600, ctx.currentTime);
+  osc.frequency.linearRampToValueAtTime(1800, ctx.currentTime + 0.05);
+  osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + duration);
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration);
+
+  // Second yelp slightly delayed
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(1200, ctx.currentTime + 0.08);
+  osc2.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + duration);
+  gain2.gain.setValueAtTime(0, ctx.currentTime);
+  gain2.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.1);
+  gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+  osc2.connect(gain2).connect(ctx.destination);
+  osc2.start(ctx.currentTime + 0.08);
+  osc2.stop(ctx.currentTime + duration);
+}
+
+function playRunSound() {
+  ensureAudio();
+  const ctx = audioCtx;
+  // Cartoon running / bongo feet sound
+  for (let i = 0; i < 6; i++) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    const t = ctx.currentTime + i * 0.07;
+    osc.frequency.setValueAtTime(200 + Math.random() * 100, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.05);
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.06);
+  }
+}
+
+function playComboSound() {
+  ensureAudio();
+  const ctx = audioCtx;
+  const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    const t = ctx.currentTime + i * 0.1;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  });
+}
+
+// ---- Game State ----
+const catEmojis = ['🐱', '🐈', '🐈‍⬛', '😺', '😸', '🙀'];
+let score = 0;
+let combo = 0;
+let comboTimer = null;
+let gameRunning = false;
+let spawnInterval;
+const gameArea = document.getElementById('game-area');
+const scoreEl = document.getElementById('score');
+
+// ---- Clouds ----
+function spawnCloud() {
+  const cloud = document.createElement('div');
+  cloud.className = 'cloud';
+  const size = 60 + Math.random() * 100;
+  cloud.style.width = size + 'px';
+  cloud.style.height = (size * 0.5) + 'px';
+  cloud.style.top = (10 + Math.random() * 25) + '%';
+  cloud.style.left = '-200px';
+  const dur = 20 + Math.random() * 30;
+  cloud.style.animationDuration = dur + 's';
+  gameArea.appendChild(cloud);
+  setTimeout(() => cloud.remove(), dur * 1000);
+}
+
+// ---- Spawn Cat ----
+function spawnCat() {
+  if (!gameRunning) return;
+
+  const cat = document.createElement('div');
+  cat.className = 'cat idle';
+  cat.textContent = catEmojis[Math.floor(Math.random() * catEmojis.length)];
+
+  const groundHeight = 80;
+  const catSize = 60;
+  const x = 50 + Math.random() * (window.innerWidth - 150);
+  const y = window.innerHeight - groundHeight - catSize - Math.random() * (window.innerHeight * 0.5);
+
+  cat.style.left = x + 'px';
+  cat.style.top = y + 'px';
+
+  // Random facing direction
+  if (Math.random() > 0.5) {
+    cat.style.transform = 'scaleX(-1)';
+  }
+
+  cat.addEventListener('click', (e) => onCatClick(e, cat));
+
+  gameArea.appendChild(cat);
+
+  // Cat walks away on its own after a while
+  const lifespan = 3000 + Math.random() * 4000;
+  setTimeout(() => {
+    if (cat.parentNode && !cat.dataset.clicked) {
+      cat.classList.remove('idle');
+      cat.classList.add(Math.random() > 0.5 ? 'run-right' : 'run-left');
+      combo = 0; // missed cat resets combo
+      setTimeout(() => cat.remove(), 900);
+    }
+  }, lifespan);
+}
+
+// ---- Cat Click Handler ----
+function onCatClick(e, cat) {
+  if (cat.dataset.clicked) return;
+  cat.dataset.clicked = 'true';
+
+  // Score
+  combo++;
+  const points = combo >= 3 ? combo * 2 : 1;
+  score += points;
+  scoreEl.textContent = score;
+
+  // Combo reset timer
+  clearTimeout(comboTimer);
+  comboTimer = setTimeout(() => { combo = 0; }, 2000);
+
+  // Combo text
+  if (combo >= 3) {
+    playComboSound();
+    const comboEl = document.createElement('div');
+    comboEl.className = 'combo-text';
+    comboEl.textContent = combo + 'x COMBO!';
+    document.body.appendChild(comboEl);
+    setTimeout(() => comboEl.remove(), 800);
+  }
+
+  // Sound: scared meow!
+  playScaredMeow();
+
+  // Exclamation marks
+  for (let i = 0; i < 3; i++) {
+    const ex = document.createElement('div');
+    ex.className = 'exclaim';
+    ex.textContent = '!';
+    ex.style.left = (e.clientX - 15 + (Math.random() - 0.5) * 40) + 'px';
+    ex.style.top = (e.clientY - 30 + (Math.random() - 0.5) * 30) + 'px';
+    gameArea.appendChild(ex);
+    setTimeout(() => ex.remove(), 600);
+  }
+
+  // Phase 1: Scared jump
+  cat.classList.remove('idle');
+  cat.classList.add('scared-jump');
+
+  // Phase 2: Run away after jump
+  setTimeout(() => {
+    playRunSound();
+
+    // Dust clouds
+    for (let i = 0; i < 3; i++) {
+      const dust = document.createElement('div');
+      dust.className = 'dust';
+      dust.textContent = '💨';
+      dust.style.left = (cat.offsetLeft + 10 + i * 15) + 'px';
+      dust.style.top = (cat.offsetTop + 30) + 'px';
+      gameArea.appendChild(dust);
+      setTimeout(() => dust.remove(), 700);
+    }
+
+    // Speed lines
+    const runDir = cat.offsetLeft > window.innerWidth / 2 ? 'run-right' : 'run-left';
+    for (let i = 0; i < 4; i++) {
+      const line = document.createElement('div');
+      line.className = 'speed-line';
+      line.style.top = (cat.offsetTop + 15 + i * 12) + 'px';
+      line.style.left = (cat.offsetLeft + (runDir === 'run-right' ? -20 : 40)) + 'px';
+      if (runDir === 'run-left') {
+        line.style.transform = 'rotate(180deg)';
+      }
+      gameArea.appendChild(line);
+      setTimeout(() => line.remove(), 500);
+    }
+
+    cat.classList.remove('scared-jump');
+    cat.classList.add(runDir);
+
+    setTimeout(() => cat.remove(), 900);
+  }, 400);
+}
+
+// ---- Start Game ----
+function startGame() {
+  ensureAudio();
+  document.getElementById('intro').style.display = 'none';
+  gameRunning = true;
+  score = 0;
+  scoreEl.textContent = '0';
+
+  // Spawn cats at random intervals
+  function scheduleNext() {
+    if (!gameRunning) return;
+    const delay = 800 + Math.random() * 1500;
+    spawnInterval = setTimeout(() => {
+      spawnCat();
+      scheduleNext();
+    }, delay);
+  }
+  scheduleNext();
+
+  // Initial cats
+  setTimeout(spawnCat, 200);
+  setTimeout(spawnCat, 600);
+
+  // Clouds
+  spawnCloud();
+  setInterval(spawnCloud, 8000);
+}
+
+// ---- Resize handling ----
+window.addEventListener('resize', () => {
+  // Remove cats that are off-screen
+  document.querySelectorAll('.cat').forEach(cat => {
+    if (cat.offsetLeft > window.innerWidth || cat.offsetTop > window.innerHeight) {
+      cat.remove();
+    }
+  });
+});
+</script>
+</body>
+</html>
