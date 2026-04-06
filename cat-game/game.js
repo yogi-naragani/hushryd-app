@@ -106,9 +106,9 @@ function spawnCat() {
   const lifespan = 4000 + Math.random() * 5000;
   setTimeout(() => {
     if (container.parentNode && !container.dataset.clicked) {
-      // Cat casually walks away
+      // Cat walks away in the direction it's facing
       container.classList.remove('idle', 'prowl');
-      const dir = Math.random() > 0.5 ? 'run-right' : 'run-left';
+      const dir = container.dataset.facing === 'left' ? 'run-left' : 'run-right';
       container.classList.add(dir);
       combo = 0;
       setTimeout(() => container.remove(), 1100);
@@ -161,8 +161,9 @@ function onCatClick(e, container) {
   const catSize = parseFloat(container.dataset.catSize);
   container.innerHTML = createScaredCatSVG(colors, catSize);
 
-  // Play scared meow + sometimes hiss
+  // Play scared meow + jump boing + sometimes hiss
   playScaredMeow();
+  playJumpSound();
   if (Math.random() > 0.5) {
     setTimeout(playHiss, 100);
   }
@@ -219,8 +220,8 @@ function onCatClick(e, container) {
       setTimeout(() => dust.remove(), 800);
     }
 
-    // Speed lines
-    const runDir = catLeft > window.innerWidth / 2 ? 'run-right' : 'run-left';
+    // Run in the direction the cat is facing
+    const runDir = container.dataset.facing === 'left' ? 'run-left' : 'run-right';
     const lineColors = ['rgba(0,0,0,0.4)', 'rgba(100,100,100,0.3)', 'rgba(50,50,50,0.35)'];
     for (let i = 0; i < 6; i++) {
       const line = document.createElement('div');
@@ -245,13 +246,19 @@ function onCatClick(e, container) {
 }
 
 // ---- Start Game ----
-function startGame() {
+async function startGame() {
   ensureAudio();
   document.getElementById('intro').style.display = 'none';
   gameRunning = true;
   score = 0;
   combo = 0;
   scoreEl.textContent = '0';
+
+  // Preload real cat sounds
+  showLoadingStatus('Loading real cat sounds...');
+  preloadMeows().then(() => {
+    showLoadingStatus('');
+  });
 
   // Spawn schedule
   function scheduleNext() {
