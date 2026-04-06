@@ -138,7 +138,6 @@ function onCatClick(e, container) {
 
   // Combo text
   if (combo >= 3) {
-    playComboSound();
     const comboEl = document.createElement('div');
     comboEl.className = 'combo-text';
     if (combo >= 7) {
@@ -161,12 +160,8 @@ function onCatClick(e, container) {
   const catSize = parseFloat(container.dataset.catSize);
   container.innerHTML = createScaredCatSVG(colors, catSize);
 
-  // Play scared meow + jump boing + sometimes hiss
-  playScaredMeow();
-  playJumpSound();
-  if (Math.random() > 0.5) {
-    setTimeout(playHiss, 100);
-  }
+  // Cat fight! Scared yowls, hisses, screams - all real cat sounds
+  playCatFight();
 
   // Exclamation effects
   const symbols = ['!', '!!', '?!', '*'];
@@ -203,8 +198,8 @@ function onCatClick(e, container) {
 
   // --- PHASE 2: RUN AWAY (Tom & Jerry style) ---
   setTimeout(() => {
-    // Play cartoon run sound
-    playRunSound();
+    // Panicked meow as cat runs away
+    playRunMeow();
 
     // Dust clouds
     const catLeft = container.offsetLeft;
